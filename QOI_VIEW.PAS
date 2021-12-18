@@ -1,26 +1,24 @@
 {$F+,S-,I-,R-,O-,F+,A-}
 USES PASQOI;
 
+CONST
+
+TEXT_MODE = 3;
+GRAPH_MODE = $13;
+
 TYPE
 PMCTX = ^TMCTX;
 TMCTX = RECORD
-        f   : File;
+        f      : File;
         inited : boolean;
-        ofs : word;
-        width : word;
-        y :word;
-        x :word;
+        ofs    : word;
+        width  : word;
+        x, y   : word;
 END;
 
-PROCEDURE TextMode;ASSEMBLER;
+PROCEDURE SetMode(mode : INTEGER);ASSEMBLER;
 ASM
-        MOV  AX, 3
-        INT  $10
-END;
-
-PROCEDURE GraphMode;ASSEMBLER;
-ASM
-        MOV  AX, $13
+        MOV  AX, mode
         INT  $10
 END;
 
@@ -37,10 +35,9 @@ END;
 
 PROCEDURE qwrite(usr_ctx : POINTER; desc : PQOI_DESC; VAR b; size : WORD; VAR iocount : WORD);far;
 VAR
-        ctx : PMCTX;
-        pc   : PCHAR;
-        bank : integer;
-        c    : integer;
+        ctx     : PMCTX;
+        pc      : PCHAR;
+        bank, c : integer;
 BEGIN
         pc := @b;
         iocount := size;
@@ -61,7 +58,6 @@ BEGIN
                 END;
                 if (ctx^.x < 320) and (ctx^.y < 200) then begin
                         c := (ord(pc[0]) and $ff + ord(pc[1]) and $ff + ord(pc[3]) and $ff) div 3;
-{                        if c > 127 then c := 15 else c := 0; }
                         mem[segA000:ctx^.ofs] := c;
                 end;
                 inc(pc, 3);
@@ -93,13 +89,14 @@ BEGIN
         {$I+}
         IF i <> 0 THEN BEGIN
                 WriteLn('Error ', i, ' while open ', ParamStr(1));
+                Halt(1);
         END ELSE BEGIN
                 ctx.inited := false;
-                GraphMode;
+                SetMode(GRAPH_MODE);
                 r := qoi_decode(@ctx, qread, qwrite, @desc, 3);
                 Close(ctx.f);
                 IF r THEN  ReadLn;
-                TextMode;
+                SetMode(TEXT_MODE);
                 IF r THEN BEGIN
                         Writeln('---------------------------------');
                         Writeln('QOI Info:');
@@ -113,6 +110,7 @@ BEGIN
                         Writeln;
                 END ELSE BEGIN
                         WriteLn('Error while decode file.');
+                        Halt(1);
                 END;
         END;
 END.
