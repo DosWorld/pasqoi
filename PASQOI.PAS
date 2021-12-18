@@ -283,19 +283,29 @@ BEGIN
         qoi_read_32 := (a shl 24) or (b shl 16) or (c shl 8) or d;
 END;
 
+FUNCTION is_valid_header(desc : PQOI_DESC) : BOOLEAN;
+BEGIN
+        is_valid_header := FALSE;
+        IF (desc <> nil) THEN BEGIN
+                is_valid_header := (desc^.width <> 0) and (desc^.height <> 0) and
+                        (desc^.channels in [3, 4]) and
+                        (desc^.height < (QOI_PIXELS_MAX div desc^.width));
+        END;
+END;
+
 FUNCTION qoi_encode(usr_ctx : POINTER; qReader, qWriter : QOI_IO_PROC; desc : PQOI_DESC) : BOOLEAN;
 VAR
-        p           : word;
-        i, run      : integer;
-        px_len      : longint;
-        px_pos      : word;
+        p           : WORD;
+        i, run      : INTEGER;
+        px_len      : LONGINT;
+        px_pos      : WORD;
         channels    : INTEGER;
-        index       : array[0..63] of TQOI_RGBA;
+        index       : ARRAY [0..63] OF TQOI_RGBA;
         px, px_prev : TQOI_RGBA;
-        index_pos   : integer;
+        index_pos   : INTEGER;
 
-        vr, vg, vb  : byte;
-        vg_r, vg_b  : byte;
+        vr, vg, vb  : BYTE;
+        vg_r, vg_b  : BYTE;
 
         bytes  : IOBUF;
         pixels : IOBUF;
@@ -328,14 +338,7 @@ VAR
 BEGIN
         qoi_encode := FALSE;
 
-        IF (desc = nil) or
-           (desc^.width = 0) or (desc^.height = 0) or
-           (desc^.channels < 3) or (desc^.channels > 4) or
-           (desc^.colorspace > 1) or
-           (desc^.height >= (QOI_PIXELS_MAX div desc^.width))
-        THEN BEGIN
-                EXIT;
-        END;
+        IF not is_valid_header(desc) THEN EXIT;
 
         p := 0;
         obuf := 0;
@@ -366,9 +369,7 @@ BEGIN
                 px.r := NextByte;
                 px.g := NextByte;
                 px.b := NextByte;
-                IF channels = 4 THEN BEGIN
-                        px.a := NextByte;
-                END;
+                IF channels = 4 THEN px.a := NextByte;
 
                 IF plongint(@px)^ = plongint(@px_prev)^ THEN BEGIN
                         Inc(run);
@@ -464,30 +465,20 @@ BEGIN
         qoi_decode := FALSE;
         p := 0;
         run := 0;
-        IF (desc = nil) or
-          ((channels <> 0) and (channels <> 3) and (channels <> 4)) THEN BEGIN
-                exit;
-        END;
+
+        IF (desc = nil) or (not channels in [0, 3, 4]) THEN EXIT;
 
         qReader(usr_ctx, desc, bytes, BUF_SIZE, inbuf);
 
-        desc^.magic    := qoi_read_32(bytes, p);
-        desc^.width    := qoi_read_32(bytes, p);
-        desc^.height   := qoi_read_32(bytes, p);
+        desc^.magic := qoi_read_32(bytes, p);
+        desc^.width := qoi_read_32(bytes, p);
+        desc^.height := qoi_read_32(bytes, p);
         desc^.channels := NextByte;
         desc^.colorspace := NextByte;
 
-        IF (desc^.width = 0) or (desc^.height = 0) or
-           (desc^.channels < 3) or (desc^.channels > 4) or
-           (desc^.colorspace > 1) or 
-           (desc^.magic <> QOI_MAGIC) or
-           (desc^.height >= (QOI_PIXELS_MAX div desc^.width)) THEN BEGIN
-                exit;
-        END;
+        IF not is_valid_header(desc) THEN EXIT;
 
-        IF channels = 0 THEN BEGIN
-                channels := desc^.channels;
-        END;
+        IF channels = 0 THEN channels := desc^.channels;
 
         FillChar(index, SizeOf(index), #0);
 
@@ -499,7 +490,7 @@ BEGIN
         px_pos := 0;
         px_len := desc^.width * desc^.height;
         WHILE px_len <> 0 DO BEGIN
-                IF run <> 0 THEN dec(run)
+                IF run <> 0 THEN Dec(run)
                 ELSE BEGIN
                         b1 := NextByte;
                         IF b1 = QOI_OP_RGB THEN BEGIN
@@ -533,7 +524,7 @@ BEGIN
                 IF channels = 4 THEN BEGIN
                         pqoi_rgba(PCHAR(@pixels) + px_pos)^ := px;
                 END ELSE BEGIN
-                        pixels[px_pos + 0] := px.r;
+                        pixels[px_pos] := px.r;
                         pixels[px_pos + 1] := px.g;
                         pixels[px_pos + 2] := px.b;
                 END;
