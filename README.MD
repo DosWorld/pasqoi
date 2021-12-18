@@ -1,4 +1,4 @@
-# qoi-java
+# pasqoi
 
 A Pascal implementation of [Quite OK Image Format](https://github.com/phoboslab/qoi).
 
