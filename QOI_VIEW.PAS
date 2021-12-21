@@ -22,7 +22,7 @@ ASM
         INT  $10
 END;
 
-PROCEDURE qread(usr_ctx : POINTER; desc : PQOI_DESC; VAR b; size : WORD; VAR iocount : WORD);far;
+PROCEDURE qread(usr_ctx : POINTER; desc : PQOI_DESC; VAR b; size :INTEGER; VAR iocount : INTEGER);far;
 VAR
         i   : INTEGER;
 BEGIN
@@ -33,7 +33,7 @@ BEGIN
         IF i <> 0 THEN iocount := 0;
 END;
 
-PROCEDURE qwrite(usr_ctx : POINTER; desc : PQOI_DESC; VAR b; size : WORD; VAR iocount : WORD);far;
+PROCEDURE qwrite(usr_ctx : POINTER; desc : PQOI_DESC; VAR b; size : INTEGER; VAR iocount : INTEGER);far;
 VAR
         ctx     : PMCTX;
         pc      : PCHAR;

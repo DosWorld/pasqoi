@@ -215,7 +215,7 @@ TQOI_DESC = RECORD
 END;
 
 {$F+}
-QOI_IO_PROC = PROCEDURE(usr_ctx : POINTER; desc : PQOI_DESC; VAR b; size : WORD; VAR iocount : WORD);
+QOI_IO_PROC = PROCEDURE(usr_ctx : POINTER; desc : PQOI_DESC; VAR b; size : INTEGER; VAR iocount : INTEGER);
 
 FUNCTION qoi_decode(usr_ctx : POINTER; qReader, qWriter : QOI_IO_PROC; desc : PQOI_DESC; channels : INTEGER) : BOOLEAN;
 FUNCTION qoi_encode(usr_ctx : POINTER; qReader, qWriter : QOI_IO_PROC; desc : PQOI_DESC) : BOOLEAN;
@@ -236,7 +236,7 @@ QOI_PIXELS_MAX : LONGINT = $17D78400;
 
 qoi_padding : ARRAY[0..7] OF BYTE = (0,0,0,0,0,0,0,1);
 
-BUF_SIZE = 1024;
+BUF_SIZE = 4 * 1024;
 
 TYPE
 
@@ -256,7 +256,7 @@ BEGIN
                 INTEGER(c.a) * 11) and $3f;
 END;
 
-PROCEDURE qoi_write_32(VAR bytes : IOBUF; VAR p : WORD; v : LONGINT);
+PROCEDURE qoi_write_32(VAR bytes : IOBUF; VAR p : INTEGER; v : LONGINT);
 BEGIN
         bytes[p] := (v shr 24) and $ff;
         inc(p);
@@ -268,7 +268,7 @@ BEGIN
         inc(p);
 END;
 
-FUNCTION qoi_read_32(VAR bytes : IOBUF; VAR p : WORD):LONGINT;
+FUNCTION qoi_read_32(VAR bytes : IOBUF; VAR p : INTEGER):LONGINT;
 VAR
         a, b, c, d : LONGINT;
 BEGIN
@@ -295,22 +295,22 @@ END;
 
 FUNCTION qoi_encode(usr_ctx : POINTER; qReader, qWriter : QOI_IO_PROC; desc : PQOI_DESC) : BOOLEAN;
 VAR
-        p           : WORD;
+        p           : INTEGER;
         i, run      : INTEGER;
         px_len      : LONGINT;
-        px_pos      : WORD;
+        px_pos      : INTEGER;
         channels    : INTEGER;
         index       : ARRAY [0..63] OF TQOI_RGBA;
         px, px_prev : TQOI_RGBA;
         index_pos   : INTEGER;
 
-        vr, vg, vb  : BYTE;
-        vg_r, vg_b  : BYTE;
+        vr, vg, vb  : INTEGER;
+        vg_r, vg_b  : INTEGER;
 
         bytes  : IOBUF;
         pixels : IOBUF;
-        obuf   : WORD;
-        inbuf  : WORD;
+        obuf   : INTEGER;
+        inbuf  : INTEGER;
 
         FUNCTION NextByte:BYTE;
         VAR
@@ -388,7 +388,7 @@ BEGIN
                         IF plongint(@index[index_pos])^ = plongint(@px)^ THEN BEGIN
                                 WriteByte(QOI_OP_INDEX or index_pos);
                         END ELSE BEGIN
-                                index[index_pos] := px;
+                                plongint(@index[index_pos])^ := plongint(@px)^;
 
                                 IF px.a = px_prev.a THEN BEGIN
                                         vr := px.r - px_prev.r;
@@ -436,7 +436,7 @@ BEGIN
                                 END;
                         END;
                 END;
-                px_prev := px;
+                plongint(@px_prev)^ := plongint(@px)^;
                 Dec(px_len);
         END;
 
@@ -458,9 +458,9 @@ VAR
 
         bytes  : IOBUF;
         pixels : IOBUF;
-        p      : WORD;
-        inbuf  : WORD;
-        obuf   : WORD;
+        p      : INTEGER;
+        inbuf  : INTEGER;
+        obuf   : INTEGER;
 
         FUNCTION NextByte:BYTE;
         BEGIN
@@ -514,7 +514,7 @@ BEGIN
                                 px.b := NextByte;
                                 px.a := NextByte;
                         END ELSE IF (b1 and QOI_MASK_2) = QOI_OP_INDEX THEN BEGIN
-                                px := index[b1];
+                                plongint(@px)^ := plongint(@index[b1])^;
                         END ELSE IF (b1 and QOI_MASK_2) = QOI_OP_DIFF THEN BEGIN
                                 inc(px.r, ((b1 shr 4) and $03) - 2);
                                 inc(px.g, ((b1 shr 2) and $03) - 2);
