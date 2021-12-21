@@ -250,10 +250,10 @@ IOBUF = ARRAY[0 .. BUF_SIZE - 1] OF BYTE;
 
 FUNCTION qoi_color_hash(VAR c : TQOI_RGBA) : INTEGER;
 BEGIN
-        qoi_color_hash := (INTEGER(c.r * 3) and $ff +
-                INTEGER(c.g * 5) and $ff +
-                INTEGER(c.b * 7) and $ff +
-                INTEGER(c.a * 11) and $ff) and $3f;
+        qoi_color_hash := (INTEGER(c.r) * 3 +
+                INTEGER(c.g) * 5 +
+                INTEGER(c.b) * 7 +
+                INTEGER(c.a) * 11) and $3f;
 END;
 
 PROCEDURE qoi_write_32(VAR bytes : IOBUF; VAR p : WORD; v : LONGINT);
@@ -411,17 +411,28 @@ BEGIN
                                                 WriteByte(QOI_OP_LUMA or (vg + 32));
                                                 WriteByte(((vg_r + 8) shl 4) or (vg_b +  8));
                                         END ELSE BEGIN
-                                                WriteByte(QOI_OP_RGB);
-                                                WriteByte(px.r);
-                                                WriteByte(px.g);
-                                                WriteByte(px.b);
+                                                IF p + 4 >= BUF_SIZE THEN BEGIN
+                                                        qWriter(usr_ctx, desc, bytes, p, obuf);
+                                                        p := 0;
+                                                END;
+                                                bytes[p] := QOI_OP_RGB;
+                                                Inc(p);
+                                                bytes[p] := px.r;
+                                                Inc(p);
+                                                bytes[p] := px.g;
+                                                Inc(p);
+                                                bytes[p] := px.b;
+                                                Inc(p);
                                         END;
                                 END ELSE BEGIN
-                                        WriteByte(QOI_OP_RGBA);
-                                        WriteByte(px.r);
-                                        WriteByte(px.g);
-                                        WriteByte(px.b);
-                                        WriteByte(px.a);
+                                        IF p + 5 >= BUF_SIZE THEN BEGIN
+                                                qWriter(usr_ctx, desc, bytes, p, obuf);
+                                                p := 0;
+                                        END;
+                                        bytes[p] := QOI_OP_RGBA;
+                                        Inc(p);
+                                        plongint(@bytes[p])^ := plongint(@px)^;
+                                        Inc(p, 4);
                                 END;
                         END;
                 END;
@@ -443,7 +454,7 @@ VAR
         px_pos : INTEGER;
         run    : INTEGER;
         vg     : INTEGER;
-        b1, b2 : INTEGER;
+        b1, b2 : BYTE;
 
         bytes  : IOBUF;
         pixels : IOBUF;
@@ -451,13 +462,13 @@ VAR
         inbuf  : WORD;
         obuf   : WORD;
 
-        FUNCTION NextByte:INTEGER;
+        FUNCTION NextByte:BYTE;
         BEGIN
                 IF p = inbuf THEN BEGIN
                         qReader(usr_ctx, desc, bytes, BUF_SIZE, inbuf);
                         p := 0;
                 END;
-                NextByte := bytes[p] and $ff;
+                NextByte := bytes[p];
                 Inc(p);
         END;
 
@@ -518,22 +529,29 @@ BEGIN
                                 run := b1 and $3f;
                         END;
 
-                        index[QOI_COLOR_HASH(px) and $3f] := px;
+                        plongint(@index[qoi_color_hash(px)])^ := plongint(@px)^;
                 END;
 
                 IF channels = 4 THEN BEGIN
-                        pqoi_rgba(PCHAR(@pixels) + px_pos)^ := px;
+                        IF px_pos >= BUF_SIZE - 4 THEN BEGIN
+                                qWriter(usr_ctx, desc, pixels, px_pos, obuf);
+                                px_pos := 0;
+                        END;
+                        plongint(@pixels[px_pos])^ := plongint(@px)^;
+                        Inc(px_pos, 4);
                 END ELSE BEGIN
+                        IF px_pos >= BUF_SIZE - 3 THEN BEGIN
+                                qWriter(usr_ctx, desc, pixels, px_pos, obuf);
+                                px_pos := 0;
+                        END;
                         pixels[px_pos] := px.r;
-                        pixels[px_pos + 1] := px.g;
-                        pixels[px_pos + 2] := px.b;
+                        Inc(px_pos);
+                        pixels[px_pos] := px.g;
+                        Inc(px_pos);
+                        pixels[px_pos] := px.b;
+                        Inc(px_pos);
                 END;
-                Inc(px_pos, channels);
                 Dec(px_len);
-                IF px_pos + channels >= BUF_SIZE THEN BEGIN
-                        qWriter(usr_ctx, desc, pixels, px_pos, obuf);
-                        px_pos := 0;
-                END;
         END;
 
         IF px_pos <> 0 THEN qWriter(usr_ctx, desc, pixels, px_pos, obuf);
