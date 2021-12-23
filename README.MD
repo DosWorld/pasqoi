@@ -1,4 +1,5 @@
-# pasqoi
+![QOI Logo](https://qoiformat.org/qoi-logo.svg)
+# PasQOI
 
 A Pascal implementation of [Quite OK Image Format](https://github.com/phoboslab/qoi).
 
