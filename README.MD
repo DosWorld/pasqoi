@@ -3,7 +3,7 @@
 
 A Pascal implementation of [Quite OK Image Format](https://github.com/phoboslab/qoi).
 
-PASQOI - This is implementation for Turbo Pascal (16-bit) with buffered read/write (duo to architectual restriction it is impossible handle more then 64kb RAM in one memory structure).
+PASQOI - This is implementation for Turbo Pascal (16-bit) with buffered read/write (due to CPU Arch restriction, it is impossible handle more then 64kb RAM in one memory structure).
 
 Next few days, I'll add implementation for 32/64-bit world.
 
