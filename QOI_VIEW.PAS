@@ -1,5 +1,5 @@
 {$F+,S-,I-,R-,O-,F+,A-}
-USES PASQOI;
+USES PASQOI16;
 
 CONST
 
