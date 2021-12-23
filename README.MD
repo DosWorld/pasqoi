@@ -10,4 +10,5 @@ A Pascal implementation of [Quite OK Image Format](https://github.com/phoboslab/
 MIT License (see LICENSE file)
 
 Copyright(c) 2021 Dominic Szablewski
+
 Copyright(c) 2021 DosWorld
